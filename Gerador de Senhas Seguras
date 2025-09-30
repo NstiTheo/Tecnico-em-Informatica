@@ -1,0 +1,117 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+from ttkbootstrap import Style
+import string, random
+import pyperclip
+
+class JanelaConfig(tk.Toplevel):
+    def __init__(self, parent, configs):
+        super().__init__(parent)
+
+        self.title("⚙️ Configurações de Senha")
+        self.geometry("350x270")
+        self.resizable(False, False)
+        self.configs = configs
+        self.configure(background="#d3d3d3")  # fundo cinza
+
+        frame = ttk.Frame(self, padding=20)
+        frame.pack(fill="both", expand=True)
+
+        self.var_maiuscula = tk.BooleanVar(value=configs["maiuscula"])
+        self.var_minuscula = tk.BooleanVar(value=configs["minuscula"])
+        self.var_numeros = tk.BooleanVar(value=configs["numeros"])
+        self.var_especial = tk.BooleanVar(value=configs["especial"])
+
+        ttk.Checkbutton(frame, text="Incluir Maiúsculas (A-Z)", variable=self.var_maiuscula, bootstyle="primary").pack(anchor="w", pady=3)
+        ttk.Checkbutton(frame, text="Incluir Minúsculas (a-z)", variable=self.var_minuscula, bootstyle="success").pack(anchor="w", pady=3)
+        ttk.Checkbutton(frame, text="Incluir Números (0-9)", variable=self.var_numeros, bootstyle="warning").pack(anchor="w", pady=3)
+        ttk.Checkbutton(frame, text="Incluir Especiais (!@#)", variable=self.var_especial, bootstyle="danger").pack(anchor="w", pady=3)
+
+        ttk.Label(frame, text="Tamanho da senha:", bootstyle="info").pack(anchor="w", pady=(15,5))
+        self.combo_tamanho = ttk.Combobox(frame, values=[8, 12, 16, 20], state="readonly", width=5)
+        self.combo_tamanho.set(configs["tamanho"])
+        self.combo_tamanho.pack(anchor="w", pady=5)
+
+        ttk.Button(frame, text="Salvar", bootstyle="success-outline", command=self.salvar).pack(pady=15)
+
+        self.transient(parent)
+        self.grab_set()
+
+    def salvar(self):
+        self.configs["maiuscula"] = self.var_maiuscula.get()
+        self.configs["minuscula"] = self.var_minuscula.get()
+        self.configs["numeros"] = self.var_numeros.get()
+        self.configs["especial"] = self.var_especial.get()
+        self.configs["tamanho"] = int(self.combo_tamanho.get())
+        messagebox.showinfo("Configurações", "Configurações salvas com sucesso!", parent=self)
+        self.destroy()
+
+
+class App(tk.Tk):
+    def __init__(self):
+        super().__init__()
+
+        self.style = Style("flatly")
+        self.title("🔐 Gerador de Senhas Seguras")
+        self.geometry("400x325")
+        self.resizable(False, False)
+        self.configure(bg="black")  
+
+        self.configs = {"maiuscula": True, "minuscula": True, "numeros": True, "especial": False, "tamanho": 12}
+
+        frame = ttk.Frame(self, padding=20)
+        frame.pack(fill="both", expand=True)
+
+        ttk.Label(frame, text="Gerador de Senhas", font=("Segoe UI", 16, "bold"), bootstyle="primary").pack(pady=10)
+
+        self.senha_var = tk.StringVar()
+        self.entry_senha = ttk.Entry(frame, textvariable=self.senha_var, font=("Consolas", 14), width=30, state="readonly", justify="center")
+        self.entry_senha.pack(pady=10)
+
+        self.forca_var = tk.StringVar(value="Força: -")
+        self.forca_label = ttk.Label(frame, textvariable=self.forca_var, font=("Segoe UI", 12, "bold"))
+        self.forca_label.pack(pady=5)
+
+        ttk.Button(frame, text="🎲 Gerar Senha", bootstyle="success", command=self.gerar_senha).pack(pady=5)
+        ttk.Button(frame, text="⚙️ Configurações", bootstyle="purple-outline", command=lambda: JanelaConfig(self, self.configs)).pack(pady=5)
+        ttk.Button(frame, text="📋 Copiar Senha", bootstyle="warning-outline", command=self.copiar_senha).pack(pady=5)
+
+    def avaliar_forca(self, senha):
+        if len(senha) < 12:
+            return "Fraca 🔴", "red"
+        elif any(c in "#@&$!()?" for c in senha):
+            return "Forte 🟢", "green"
+        else:
+            return "Média 🟠", "orange"
+
+    def gerar_senha(self):
+        caracteres = ""
+        if self.configs["maiuscula"]:
+            caracteres += string.ascii_uppercase
+        if self.configs["minuscula"]:
+            caracteres += string.ascii_lowercase
+        if self.configs["numeros"]:
+            caracteres += string.digits
+        if self.configs["especial"]:
+            caracteres += "#@&$!()?"
+        if not caracteres:
+            caracteres = string.ascii_letters
+
+        tamanho = self.configs["tamanho"]
+        senha = "".join(random.choice(caracteres) for _ in range(tamanho))
+        self.senha_var.set(senha)
+
+        forca_texto, cor = self.avaliar_forca(senha)
+        self.forca_var.set(f"Força: {forca_texto}")
+        self.forca_label.configure(foreground=cor)
+
+    def copiar_senha(self):
+        senha = self.senha_var.get()
+        if senha:
+            pyperclip.copy(senha)
+            messagebox.showinfo("Copiar Senha", "Senha copiada para a área de transferência!")
+
+
+if __name__ == "__main__":
+    app = App()
+    app.mainloop()
